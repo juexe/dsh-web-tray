@@ -21,6 +21,9 @@
 .PARAMETER Manager
     内部参数：以托盘宿主身份运行，由启动器隐藏拉起。
 
+.PARAMETER Stop
+    停止正在运行的托盘宿主并等待其退出，供卸载程序使用。
+
 .PARAMETER BindHost
     覆盖配置里的 dsh web 绑定地址，仅对本次启动生效。
 
@@ -51,6 +54,7 @@
 [CmdletBinding()]
 param(
     [switch]$Manager,
+    [switch]$Stop,
     [string]$BindHost,
     [Nullable[int]]$Port,
     [Nullable[int]]$WindowLeft,
@@ -1188,6 +1192,12 @@ function Read-LaunchRequest {
 function Invoke-LaunchRequest {
     param([object]$Request)
 
+    if ($Request.PSObject.Properties['exit'] -and [bool]$Request.exit) {
+        Write-TrayLog '收到退出请求，停止托盘。'
+        Exit-Tray
+        return
+    }
+
     $showWindow = $true
     if ($Request.PSObject.Properties['showWindow']) { $showWindow = [bool]$Request.showWindow }
 
@@ -1539,6 +1549,28 @@ function Test-ManagerAlive {
     }
 }
 
+function Invoke-StopRequest {
+    $existingId = 0
+    if (Test-Path -LiteralPath $pidPath -PathType Leaf) {
+        $pidText = (Get-Content -LiteralPath $pidPath -Raw -ErrorAction SilentlyContinue).Trim()
+        if ([int]::TryParse($pidText, [ref]$existingId) -and (Test-ManagerAlive -ProcessId $existingId)) {
+            [ordered]@{ exit = $true } | ConvertTo-Json | Set-Content -LiteralPath $requestPath -Encoding utf8
+            $deadline = (Get-Date).AddSeconds(10)
+            while ((Get-Date) -lt $deadline) {
+                if (-not (Test-ProcessAlive -ProcessId $existingId)) {
+                    Write-Host "DSH Web 托盘已退出（PID $existingId）。"
+                    return
+                }
+                Start-Sleep -Milliseconds 200
+            }
+            throw "等待 DSH Web 托盘退出超时（PID $existingId）。"
+        }
+    }
+
+    Remove-Item -LiteralPath $pidPath -Force -ErrorAction SilentlyContinue
+    Write-Host 'DSH Web 托盘未在运行。'
+}
+
 function Invoke-Launcher {
     $config = Get-EffectiveConfig
     $null = Resolve-DshCommand
@@ -1600,6 +1632,11 @@ function Invoke-Launcher {
 
     Start-Process -FilePath $script:hostExePath -ArgumentList $arguments -WorkingDirectory $scriptRoot -WindowStyle Hidden | Out-Null
     Write-Host "DSH Web 托盘已启动，托管 $($config.BindHost):$($config.Port)，数据目录：$dataDir"
+}
+
+if ($Stop) {
+    Invoke-StopRequest
+    return
 }
 
 Initialize-DataRoot

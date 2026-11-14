@@ -307,6 +307,23 @@ try {
         }
         $null = Wait-Until -Condition { -not (Test-PortListening -Port $TestPort) } -TimeoutSeconds 15
     }
+
+    Write-Host "`n== 6. -Stop 停止托盘 =="
+    Reset-State
+    $hostProcess = Start-TrayHost -BindHost '127.0.0.1' -Port $TestPort -NoWindow
+    try {
+        $ready = Wait-Until -Condition { (Get-TrayLog) -match 'dsh web 已就绪' } -TimeoutSeconds 40
+        Assert-That '-Stop 测试宿主已就绪' $ready (Get-TrayLog)
+
+        $stopOutput = Invoke-TrayScript -Arguments @('-DataRoot', $stateRoot, '-Stop')
+        Assert-That '-Stop 返回退出确认' ($stopOutput -match 'DSH Web 托盘已退出') $stopOutput
+        Assert-That '-Stop 后宿主进程退出' (Wait-Until -Condition { -not (Get-CimInstance Win32_Process -Filter "ProcessId = $($hostProcess.Id)" -ErrorAction SilentlyContinue) } -TimeoutSeconds 10)
+        Assert-That '-Stop 后端口释放' (Wait-Until -Condition { -not (Test-PortListening -Port $TestPort) } -TimeoutSeconds 10)
+        Assert-That '-Stop 后清理 tray.pid' (-not (Test-Path -LiteralPath $pidPath -PathType Leaf))
+    } finally {
+        Stop-TrayHost -ProcessId $hostProcess.Id
+        $null = Wait-Until -Condition { -not (Test-PortListening -Port $TestPort) } -TimeoutSeconds 15
+    }
 } finally {
     $env:PATH = $originalPath
     Reset-State
