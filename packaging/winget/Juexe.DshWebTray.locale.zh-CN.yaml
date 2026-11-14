@@ -1,6 +1,6 @@
 # yaml-language-server: $schema=https://aka.ms/winget-manifest.locale.1.12.0.schema.json
 PackageIdentifier: Juexe.DshWebTray
-PackageVersion: 1.0.0
+PackageVersion: 1.0.1
 PackageLocale: zh-CN
 Publisher: Juexe
 PublisherUrl: https://github.com/juexe
@@ -23,7 +23,7 @@ Tags:
 - edge
 - powershell
 InstallationNotes: 需要先将 DeepSeek Harness CLI（`dsh`）加入 PATH，可通过 `npm install -g @deepseek-ai/dsh` 安装。
-ReleaseNotesUrl: https://github.com/juexe/dsh-web-tray/releases/tag/v1.0.0
+ReleaseNotesUrl: https://github.com/juexe/dsh-web-tray/releases/tag/v1.0.1
 Documentations:
 - DocumentLabel: README
   DocumentUrl: https://github.com/juexe/dsh-web-tray/blob/main/README.md

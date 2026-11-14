@@ -324,6 +324,27 @@ try {
         Stop-TrayHost -ProcessId $hostProcess.Id
         $null = Wait-Until -Condition { -not (Test-PortListening -Port $TestPort) } -TimeoutSeconds 15
     }
+
+    Write-Host "`n== 7. 缺少 dsh 时保留托盘并提示 =="
+    Reset-State
+    $missingHost = $null
+    $savedPath = $env:PATH
+    try {
+        $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
+        $missingHost = Start-TrayHost -BindHost '127.0.0.1' -Port $TestPort -NoWindow
+    } finally {
+        $env:PATH = $savedPath
+    }
+    try {
+        $missingLogged = Wait-Until -Condition { (Get-TrayLog) -match '未在 PATH 中找到 dsh 命令' } -TimeoutSeconds 30
+        Assert-That '缺少 dsh 时记录错误' $missingLogged (Get-TrayLog)
+        Assert-That '缺少 dsh 时托盘仍运行' ([bool](Get-CimInstance Win32_Process -Filter "ProcessId = $($missingHost.Id)" -ErrorAction SilentlyContinue))
+        $stopOutput = Invoke-TrayScript -Arguments @('-DataRoot', $stateRoot, '-Stop')
+        Assert-That '-Stop 可停止缺少 dsh 的托盘' ($stopOutput -match 'DSH Web 托盘已退出') $stopOutput
+    } finally {
+        Stop-TrayHost -ProcessId $(if ($missingHost) { $missingHost.Id } else { 0 })
+        $null = Wait-Until -Condition { -not (Test-PortListening -Port $TestPort) } -TimeoutSeconds 15
+    }
 } finally {
     $env:PATH = $originalPath
     Reset-State

@@ -15,7 +15,7 @@ DeepSeek Harness 官方桌面版基于 Electron，内存与进程开销大，且
 
 ## 安装
 
-从 [GitHub Releases](https://github.com/juexe/dsh-web-tray/releases) 下载 `dsh-web-tray-1.0.0-setup.exe` 运行。安装到当前用户的 `%LOCALAPPDATA%\Programs\dsh-web-tray`，无需管理员权限。
+从 [GitHub Releases](https://github.com/juexe/dsh-web-tray/releases) 下载 `dsh-web-tray-<版本>-setup.exe` 运行。安装到当前用户的 `%LOCALAPPDATA%\Programs\dsh-web-tray`，无需管理员权限。
 
 winget 包收录后也可以直接安装：
 
@@ -23,7 +23,7 @@ winget 包收录后也可以直接安装：
 winget install --id Juexe.DshWebTray --exact
 ```
 
-安装后从开始菜单启动。卸载会先停止托盘，再删除程序文件；`data/` 中的配置、日志与 Edge 配置会保留。
+安装后从开始菜单启动。卸载会先停止托盘，再删除程序文件；`data/` 中的配置、日志与 Edge 配置会保留。如果启动时 `PATH` 中没有 `dsh`，托盘会保持运行并提示安装，安装后可从菜单重新启动服务。
 
 ## 从源码运行
 

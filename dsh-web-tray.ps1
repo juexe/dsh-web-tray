@@ -860,6 +860,19 @@ function Start-WebServer {
         return
     }
 
+    if (-not $script:dshPath) {
+        try {
+            $script:dshPath = Resolve-DshCommand
+        } catch {
+            $script:desiredRunning = $false
+            $message = $_.Exception.Message
+            Write-TrayLog $message 'error'
+            Set-TrayPhase 'dsh-missing'
+            Show-TrayNotification -Title 'DSH Web 未启动' -Message $message -Icon Warning
+            return
+        }
+    }
+
     $script:webUrl = $null
     $script:webDisplayUrl = $null
     $script:webError = $null
@@ -1080,6 +1093,7 @@ function Update-TrayStatus {
         'waiting' { '等待重启…' }
         'port-conflict' { "端口 $($script:port) 被占用" }
         'host-missing' { "缺少本机地址 $($script:bindHost)" }
+        'dsh-missing' { '未找到 dsh' }
         'failed' { '启动失败' }
         'stopped' { '已停止' }
         default { [string]$script:phase }
@@ -1336,6 +1350,7 @@ function Invoke-Manager {
     $script:consecutiveFailures = 0
     $script:pendingWindowOpen = $false
     $script:startupNoWindow = [bool]$NoWindow
+    $script:dshPath = $null
     $script:notifyIcon = $null
     $script:trayIcon = $null
     $script:statusItem = $null
@@ -1354,7 +1369,12 @@ function Invoke-Manager {
         $script:windowHeight = $config.Height
         $script:pendingWindowOpen = $config.OpenWindow
 
-        $script:dshPath = Resolve-DshCommand
+        try {
+            $script:dshPath = Resolve-DshCommand
+        } catch {
+            $script:dshPath = $null
+            Write-TrayLog "未找到 dsh 命令：$($_.Exception.Message)" 'warn'
+        }
         Remove-OrphanWebServer
 
         if (-not (Test-Path -LiteralPath $iconPath -PathType Leaf)) {
@@ -1573,7 +1593,6 @@ function Invoke-StopRequest {
 
 function Invoke-Launcher {
     $config = Get-EffectiveConfig
-    $null = Resolve-DshCommand
 
     $existingId = 0
     if (Test-Path -LiteralPath $pidPath) {
